@@ -1,0 +1,51 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "mo4$",
+      "friends": ["0nfully55", "gsk459"]
+    },
+    {
+      "id": 2,
+      "username": "0nfully55",
+      "friends": ["john_doe"]
+    },
+   
+    {
+      "id": 3,
+      "username": "gsk459",
+      "friends": ["john_doe"]
+    },
+    {
+      "id": 4,
+      "username": "fakepercccs",
+      "friends": ["0nfully55", "gsk459"]
+    },
+    {
+      "id": 4,
+      "username": "yuckkk440",
+      "friends": ["0nfully55", "gsk459"]
+    },
+    {
+      "id": 4,
+      "username": "dogfood04g",
+      "friends": ["0nfully55", "gsk459"]
+    },
+     {
+      "id": 4,
+      "username": "mafi0",
+      "friends": ["0nfully55", "gsk459"]
+    },
+    {
+      "id": 4,
+      "username": "jasmine<3",
+      "friends": ["0nfully55", "gsk459"]
+    },
+    {
+      "id": 4,
+      "username": "tre22",
+      "friends": ["0nfully55", "gsk459"]
+    }
+    
+  ]
+}
