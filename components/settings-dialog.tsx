@@ -1,7 +1,8 @@
 "use client";
-
-import * as React from "react";
-import { Globe, MessageCircle, Link } from "lucide-react"; // Import only necessary icons
+import React, { useState, useEffect } from "react";
+import { Globe, MessageCircle, Link, Menu } from "lucide-react";
+import VideoPlayer from "@/components/VideoPlayer";
+import LeafletMap from "@/components/LeafletMap";
 
 import {
   Breadcrumb,
@@ -30,55 +31,137 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 
-// Static data for the menu
+// Define the user interface
+interface User {
+  id: number;
+  username: string;
+}
+
+// Messages Component
+const Messages: React.FC<{ userEmail: string }> = ({ userEmail }) => {
+  const [messages, setMessages] = useState<{ user: string; text: string }[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleSendMessage = () => {
+    if (newMessage.trim()) {
+      setMessages((prev) => [...prev, { user: userEmail, text: newMessage.trim() }]);
+      setNewMessage("");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Prevents newline
+      handleSendMessage();
+    }
+  };
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Messages List */}
+      <div className="flex-1 space-y-2 overflow-y-auto border border-b-transparent p-2 rounded bg-transparent">
+        {messages.length > 0 ? (
+          messages.map((msg, index) => (
+            <div
+              key={index}
+              className="p-2 bg-transparent border rounded shadow-sm text-gray-500"
+            >
+              <span className="font-bold text-gray-500">{msg.user}: </span>
+              {msg.text}
+            </div>
+          ))
+        ) : (
+          <p className=""></p>
+        )}
+      </div>
+
+      {/* Input for New Message */}
+      <div className="sticky bottom-0 flex space-x-2 border p-2 bg-transparent rounded">
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="Type a message"
+          className="flex-1 p-2 text-gray-300 bg-transparent border rounded outline-none "
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <button
+
+          className="px-4 py-2 bg-transparent border rounded hover:border-green-900"
+          onClick={handleSendMessage}
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Static navigation items (fixed items like Messages, $$$$, Location)
 const staticNavItems = [
   { name: "Messages", icon: MessageCircle, url: "#" },
   { name: "$$$$$", icon: Link, url: "https://buy.stripe.com/6oE7t83TqdXO9OgeUU" },
+  { name: "Videos", icon: Globe, url: "#" },
   { name: "Location", icon: Globe, url: "#" },
 ];
 
-type Username = {
-  username: string;
-};
-
 export function SettingsDialog() {
-  const [open, setOpen] = React.useState(true);
-  const [usernames, setUsernames] = React.useState<Username[]>([]); // State with proper type
+  const [open, setOpen] = useState(true);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedMenu, setSelectedMenu] = useState<string>("Messages");
 
-  // Fetch random usernames from the JSON server
-  React.useEffect(() => {
-    async function fetchUsernames() {
+  // Fetch all users from the JSON Server
+  useEffect(() => {
+    async function fetchUsers() {
       try {
-        const response = await fetch("http://localhost:3001/randomUsernames");
+        const response = await fetch("http://localhost:3001/users");
         if (!response.ok) {
-          throw new Error(`Error fetching usernames: ${response.statusText}`);
+          throw new Error(`Error fetching users: ${response.statusText}`);
         }
-        const data: Username[] = await response.json(); // Ensure correct typing
-        setUsernames(data); // Store the fetched usernames in state
+        const data = await response.json();
+        setUsers(data);
       } catch (error) {
-        console.error("Fetch error:", (error as Error).message); // Proper error logging
+        console.error("Fetch error:", error);
       }
     }
 
-    fetchUsernames();
+    fetchUsers();
   }, []);
 
-  // Combine static navigation items with fetched usernames
-  const combinedNavItems = [
-    ...staticNavItems,
-    ...usernames.map((user) => ({
-      name: user.username, // Username as the name
-      icon: MessageCircle, // Default icon
-      url: "#", // Default link
-    })),
-  ];
+  // Combine static items with the fetched users' usernames (for the "friends" list)
+  const friendsNavItems = users.map((user) => ({
+    name: user.username,
+    icon: MessageCircle,
+    url: "#",
+  }));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">Open Dialog</Button>
+        <Button
+          className="absolute top-10 right-10 bg-transparent hover:bg-opacity-90 text-slate-900 text-4xl flex items-center gap-2"
+          aria-label="Menu"
+        >
+          <Menu className="h-12 w-12" />
+        </Button>
       </DialogTrigger>
-      <DialogContent className="overflow-hidden p-0 md:max-h-[500px] md:max-w-[700px] lg:max-w-[800px]">
+      <DialogContent
+        className="overflow-hidden p-0 md:max-h-[500px] md:max-w-[700px] lg:max-w-[80vw] lg:max-h-[80vh]"
+        onKeyDown={(e) => {
+          // Prevent Dialog from intercepting Enter
+          if (e.key === "Enter") {
+            e.stopPropagation();
+          }
+        }}
+      >
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <DialogDescription className="sr-only">
           Customize your settings here.
@@ -87,11 +170,16 @@ export function SettingsDialog() {
           <Sidebar collapsible="none" className="hidden md:flex">
             <SidebarContent>
               <SidebarGroup>
+                {/* Static navigation items like Messages, $$$$, Location */}
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {combinedNavItems.map((item, index) => (
+                    {staticNavItems.map((item, index) => (
                       <SidebarMenuItem key={index}>
-                        <SidebarMenuButton asChild>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={selectedMenu === item.name}
+                          onClick={() => setSelectedMenu(item.name)}
+                        >
                           <a href={item.url}>
                             <item.icon />
                             <span>{item.name}</span>
@@ -102,10 +190,30 @@ export function SettingsDialog() {
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
+
+              {/* Friends list (dynamic items populated from the server) */}
+              {friendsNavItems.length > 0 && (
+                <SidebarGroup>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {friendsNavItems.map((friend, index) => (
+                        <SidebarMenuItem key={index}>
+                          <SidebarMenuButton asChild>
+                            <a href={friend.url}>
+                              <friend.icon />
+                              <span>{friend.name}</span>
+                            </a>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
             </SidebarContent>
           </Sidebar>
           <main className="flex h-[480px] dark flex-1 flex-col overflow-hidden">
-            <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+            <header className="flex h-16 shrink-0 items-center gap-2">
               <div className="flex items-center dark gap-2 px-4">
                 <Breadcrumb>
                   <BreadcrumbList>
@@ -114,19 +222,24 @@ export function SettingsDialog() {
                     </BreadcrumbItem>
                     <BreadcrumbSeparator className="hidden md:block" />
                     <BreadcrumbItem>
-                      <BreadcrumbPage>Messages</BreadcrumbPage>
+                      <BreadcrumbPage>{selectedMenu}</BreadcrumbPage>
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
               </div>
             </header>
             <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pt-0">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="aspect-video max-w-3xl rounded-xl bg-dark"
-                />
-              ))}
+              {selectedMenu === "Messages" ? (
+                <Messages userEmail="dogfood0466" />
+              ) : selectedMenu === "Videos" ? (
+                <VideoPlayer />
+              ) : selectedMenu === "Location" ? (
+                <LeafletMap />
+              ) : (
+                Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="aspect-video max-w-3xl rounded-xl bg-dark" />
+                ))
+              )}
             </div>
           </main>
         </SidebarProvider>
@@ -134,4 +247,3 @@ export function SettingsDialog() {
     </Dialog>
   );
 }
-
